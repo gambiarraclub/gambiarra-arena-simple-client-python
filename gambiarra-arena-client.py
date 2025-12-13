@@ -10,7 +10,7 @@ import httpx
 # CONFIGURAÇÕES - Edite aqui conforme necessário
 # ============================================
 HOST = "192.168.0.212"  # IP do servidor da arena
-PIN = "937414"  # PIN da sessão
+PIN = "544208"  # PIN da sessão
 PARTICIPANT_ID = "meuId"  # ID do participante
 NICKNAME = "Python Mock"  # Apelido do participante
 
