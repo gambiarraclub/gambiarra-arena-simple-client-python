@@ -12,30 +12,19 @@ import argparse
 import websockets
 import httpx
 
+from mockup_messages import MOCKUP_RESPONSES
+
 # ============================================
 # CONFIGURAÇÕES PADRÃO
 # ============================================
 IS_MOCKUP = True  # Se True, usa respostas mockadas em vez do Ollama
 
-DEFAULT_HOST = "192.168.1.99"
-DEFAULT_PIN = "231078"
-DEFAULT_NUM_CLIENTS = 3
+DEFAULT_HOST = "192.168.0.212"
+DEFAULT_PIN = "099625"
+DEFAULT_NUM_CLIENTS = 1000
 DEFAULT_OLLAMA_HOST = "localhost"
 DEFAULT_OLLAMA_MODEL = "qwen3:0.6b"
 # ============================================
-
-MOCKUP_RESPONSES = [
-    "The answer to your question is 42, the ultimate answer to life, the universe, and everything.",
-    "Python is a great programming language known for its simplicity and readability.",
-    "Machine learning is a subset of artificial intelligence that enables systems to learn from data.",
-    "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet.",
-    "WebSockets provide full-duplex communication channels over a single TCP connection.",
-    "Async programming allows you to write concurrent code using the async/await syntax.",
-    "The best way to predict the future is to create it. Start small, iterate fast.",
-    "Code is like humor. When you have to explain it, it's bad.",
-    "First, solve the problem. Then, write the code. Planning is essential.",
-    "Simplicity is the soul of efficiency. Keep your code clean and maintainable.",
-]
 
 
 def context_engineering(prompt: str) -> str:
@@ -73,6 +62,8 @@ class ArenaClient:
         self.pin = pin
         self.ollama_url = f"http://{ollama_host}:11434"
         self.ollama_model = ollama_model
+        # Delay aleatório entre tokens para simular diferentes velocidades de streaming
+        self.token_delay = random.uniform(0.05, 0.50)
 
     def log(self, message: str):
         """Log com prefixo do cliente."""
@@ -81,7 +72,7 @@ class ArenaClient:
     async def _handle_mockup_response(self, ws, round_id):
         """Envia uma resposta mockada simulando streaming de tokens."""
         mockup_response = random.choice(MOCKUP_RESPONSES)
-        self.log(f"[MOCKUP] Usando resposta mockada")
+        self.log(f"[MOCKUP] Usando resposta mockada (delay: {self.token_delay:.3f}s)")
 
         start_time = time.perf_counter()
         words = mockup_response.split()
@@ -99,8 +90,8 @@ class ArenaClient:
             }
             await ws.send(json.dumps(token_msg))
             seq += 1
-            # Pequeno delay para simular streaming
-            await asyncio.sleep(0.05)
+            # Delay configurado para este cliente
+            await asyncio.sleep(self.token_delay)
 
         end_time = time.perf_counter()
         duration_ms = int((end_time - start_time) * 1000)
@@ -112,7 +103,7 @@ class ArenaClient:
             "round": round_id,
             "participant_id": self.participant_id,
             "tokens": len(words),
-            "latency_ms_first_token": 50,  # Valor fixo para mockup
+            "latency_ms_first_token": int(self.token_delay * 1000),
             "duration_ms": duration_ms,
         }
         await ws.send(json.dumps(complete_msg))
