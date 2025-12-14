@@ -5,6 +5,7 @@ Cada cliente se conecta independentemente e responde aos desafios.
 """
 import asyncio
 import json
+import random
 import time
 import argparse
 
@@ -14,12 +15,27 @@ import httpx
 # ============================================
 # CONFIGURAÇÕES PADRÃO
 # ============================================
+IS_MOCKUP = True  # Se True, usa respostas mockadas em vez do Ollama
+
 DEFAULT_HOST = "192.168.1.99"
-DEFAULT_PIN = "715661"
+DEFAULT_PIN = "231078"
 DEFAULT_NUM_CLIENTS = 3
 DEFAULT_OLLAMA_HOST = "localhost"
 DEFAULT_OLLAMA_MODEL = "qwen3:0.6b"
 # ============================================
+
+MOCKUP_RESPONSES = [
+    "The answer to your question is 42, the ultimate answer to life, the universe, and everything.",
+    "Python is a great programming language known for its simplicity and readability.",
+    "Machine learning is a subset of artificial intelligence that enables systems to learn from data.",
+    "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet.",
+    "WebSockets provide full-duplex communication channels over a single TCP connection.",
+    "Async programming allows you to write concurrent code using the async/await syntax.",
+    "The best way to predict the future is to create it. Start small, iterate fast.",
+    "Code is like humor. When you have to explain it, it's bad.",
+    "First, solve the problem. Then, write the code. Planning is essential.",
+    "Simplicity is the soul of efficiency. Keep your code clean and maintainable.",
+]
 
 
 def context_engineering(prompt: str) -> str:
@@ -62,6 +78,45 @@ class ArenaClient:
         """Log com prefixo do cliente."""
         print(f"[Client {self.client_id}] {message}")
 
+    async def _handle_mockup_response(self, ws, round_id):
+        """Envia uma resposta mockada simulando streaming de tokens."""
+        mockup_response = random.choice(MOCKUP_RESPONSES)
+        self.log(f"[MOCKUP] Usando resposta mockada")
+
+        start_time = time.perf_counter()
+        words = mockup_response.split()
+        seq = 0
+
+        # Simula streaming palavra por palavra
+        for i, word in enumerate(words):
+            token_content = word if i == 0 else " " + word
+            token_msg = {
+                "type": "token",
+                "round": round_id,
+                "participant_id": self.participant_id,
+                "seq": seq,
+                "content": token_content,
+            }
+            await ws.send(json.dumps(token_msg))
+            seq += 1
+            # Pequeno delay para simular streaming
+            await asyncio.sleep(0.05)
+
+        end_time = time.perf_counter()
+        duration_ms = int((end_time - start_time) * 1000)
+
+        self.log(f"[MOCKUP] Resposta completa ({len(words)} tokens, {duration_ms}ms)")
+
+        complete_msg = {
+            "type": "complete",
+            "round": round_id,
+            "participant_id": self.participant_id,
+            "tokens": len(words),
+            "latency_ms_first_token": 50,  # Valor fixo para mockup
+            "duration_ms": duration_ms,
+        }
+        await ws.send(json.dumps(complete_msg))
+
     async def handle_challenge(self, ws, challenge: dict):
         """
         Trata mensagem de desafio vinda do servidor e envia:
@@ -71,10 +126,15 @@ class ArenaClient:
         round_id = challenge.get("round")
         prompt = challenge.get("prompt", "")
 
-        enhanced_prompt = context_engineering(prompt)
-
         self.log(f"Desafio recebido - round: {round_id}")
         self.log(f"Prompt: {prompt[:50]}...")
+
+        # Modo mockado: usa resposta aleatória da lista
+        if IS_MOCKUP:
+            await self._handle_mockup_response(ws, round_id)
+            return
+
+        enhanced_prompt = context_engineering(prompt)
 
         ollama_request = {
             "model": self.ollama_model,
