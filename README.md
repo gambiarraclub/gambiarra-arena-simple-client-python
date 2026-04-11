@@ -17,7 +17,7 @@ A Gambiarra Arena é uma **competição ao vivo entre IAs locais**. Cada partici
 │  3. O modelo gera a resposta, e o cliente envia palavra por     │
 │     palavra para o telão em tempo real                          │
 │                                                                 │
-│  4. Os participantes votam na melhor resposta                  │
+│  4. Os participantes votam na melhor resposta                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
